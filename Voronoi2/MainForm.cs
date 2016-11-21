@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Numerics;
 
 using CSPoint = System.Drawing.Point;
 
@@ -15,7 +16,7 @@ namespace Voronoi2
   /// </summary>
   public sealed partial class MainForm : Form
   {
-    private static int _siteCount = 30;
+    private static int _siteCount = 10;
 
     public readonly Random Random = new Random(42);
     public readonly Voronoi Voronoi = new Voronoi();
@@ -23,16 +24,13 @@ namespace Voronoi2
     public MainForm()
     {
       InitializeComponent();
+    }
 
-      var bitmap = new Bitmap(DiagramHost.Width, DiagramHost.Height);
+    protected override void OnLoad(EventArgs e)
+    {
+      base.OnLoad(e);
 
-      using (var graphics = Graphics.FromImage(bitmap))
-      {
-        graphics.Clear(Color.White);
-        graphics.SmoothingMode = SmoothingMode.HighQuality;
-      }
-
-      DiagramHost.Image = bitmap;
+      SiteCounter.Value = _siteCount;
     }
 
     private void SpreadPoints()
@@ -58,25 +56,27 @@ namespace Voronoi2
           graphics.DrawLine(Pens.Black, (float) edge.P0.X, (float) edge.P0.Y, (float) edge.P1.X, (float) edge.P1.Y);
         }
 
-        var dict = new Dictionary<int, HashSet<PointF>>();
+        var dict = new Dictionary<int, List<PointF>>();
 
         foreach (var edge in edges)
         {
-          var set = default(HashSet<PointF>);
+          var set = default(List<PointF>);
 
           if (!dict.TryGetValue(edge.SiteIndex0, out set))
           {
-            dict[edge.SiteIndex0] = set = new HashSet<PointF>();
+            dict[edge.SiteIndex0] = set = new List<PointF>();
           }
 
+          set.Add(sites[edge.SiteIndex0]);
           set.Add(edge.P0);
           set.Add(edge.P1);
 
           if (!dict.TryGetValue(edge.SiteIndex1, out set))
           {
-            dict[edge.SiteIndex1] = set = new HashSet<PointF>();
+            dict[edge.SiteIndex1] = set = new List<PointF>();
           }
 
+          set.Add(sites[edge.SiteIndex1]);
           set.Add(edge.P0);
           set.Add(edge.P1);
         }
@@ -84,18 +84,30 @@ namespace Voronoi2
         foreach (var set in dict.Values)
         {
           var brush = new SolidBrush(Color.FromArgb(-0x7F000000 + Random.Next(0x00FFFFFF)));
+          var points = set.ToArray();
 
-          if (set.Count > 2)
+          //for (var index = 0; index < points.Length; index += 3)
           {
-            //graphics.FillPolygon(brush, set.ToArray(), FillMode.Winding);
+            //var p0 = points[index + 0];
+            //var p1 = points[index + 1];
+            //var p2 = points[index + 2];
+
+            //var cross = Vector3.Cross(new Vector3(p1.X - p0.X, p1.Y - p0.Y, 0), new Vector3(p2.X - p0.X, p2.Y - p0.Y, 0));
+
+            //if (cross.Z < 0)
+            //{
+            //  points[index + 1] = p2;
+            //  points[index + 2] = p1;
+            //}
           }
-          else
-          {
-          }
+
+          //graphics.DrawPolygon(Pens.DimGray, points);
+          graphics.FillPolygon(brush, points);
         }
 
         for (var i = 0; i < sites.Count; i++)
         {
+          graphics.DrawString($"{i + 1}", SystemFonts.MenuFont, Brushes.Black, (float) sites[i].X, (float) sites[i].Y - 22F);
           graphics.FillEllipse(Brushes.Blue, (float) (sites[i].X - 1.5), (float) (sites[i].Y - 1.5), 3F, 3F);
         }
       }

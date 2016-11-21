@@ -84,15 +84,10 @@ namespace Voronoi2
       return _allEdges;
     }
 
-    // implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax, deltax,
-    // deltay (can all be estimates). 
-    // Performance suffers if they are wrong; better to make nsites, deltax, and deltay too big than too small. (?)
     private void Generate()
     {
       var newIntersection = default(Point);
-
-      HalfEdge leftBoundaryHalfEdge;
-      Edge edge;
+      var edge = default(Edge);
 
       InitializePriorityQueue();
       InitializeEdgeList();
@@ -108,15 +103,15 @@ namespace Voronoi2
           newIntersection = GetMinimumPriorityQueue();
         }
 
-        Site bottomSite;
-        Site site;
-        HalfEdge rightBoundaryHalfEdge;
+        var bottomSite = default(Site);
+        var currentSite = default(Site);
+        var rightBoundaryHalfEdge = default(HalfEdge);
 
         // if the lowest site has a smaller Y value than the lowest vector intersection, process the site otherwise process the vector intersection.
         if (nextSite != null && (IsEmptyPriorityQueue() || nextSite.Point.Y < newIntersection.Y || IsNearlyEqual(nextSite.Point.Y, newIntersection.Y) && nextSite.Point.X < newIntersection.X))
         {
           // New site is smallest -this is a site event get the first HalfEdge to the LEFT of the new site
-          leftBoundaryHalfEdge = LeftBoundaryEdgeList(nextSite.Point);
+          var leftBoundaryHalfEdge = LeftBoundaryEdgeList(nextSite.Point);
 
           // Get the first HalfEdge to the RIGHT of the new site
           rightBoundaryHalfEdge = leftBoundaryHalfEdge.Right;
@@ -128,32 +123,32 @@ namespace Voronoi2
           edge = Bisect(bottomSite, nextSite);
 
           // create a new HalfEdge, setting its EdgeListSide field to 0
-          var bisector = CreateHalfEdge(edge, LeftSide);
+          var bisector = new HalfEdge(edge, LeftSide);
 
           // insert this new bisector edge between the left and right vectors in a linked list
           InsertIntoEdgeList(leftBoundaryHalfEdge, bisector);
 
           // if the new bisector intersects with the left edge,
           // remove the left edge'site vertex, and put in the new one
-          if ((site = Intersect(leftBoundaryHalfEdge, bisector)) != null)
+          if ((currentSite = Intersect(leftBoundaryHalfEdge, bisector)) != null)
           {
             DeletePriorityQueue(leftBoundaryHalfEdge);
-            InsertPriorityQueue(leftBoundaryHalfEdge, site, Distance(site, nextSite));
+            InsertPriorityQueue(leftBoundaryHalfEdge, currentSite, Distance(currentSite, nextSite));
           }
 
           leftBoundaryHalfEdge = bisector;
 
           // create a new HalfEdge, setting its EdgeListSide field to 1
-          bisector = CreateHalfEdge(edge, RightSide);
+          bisector = new HalfEdge(edge, RightSide);
 
           // insert the new HE to the right of the original bisector earlier in the IF stmt
           InsertIntoEdgeList(leftBoundaryHalfEdge, bisector);
 
           // if this new bisector intersects with the new HalfEdge
-          if ((site = Intersect(bisector, rightBoundaryHalfEdge)) != null)
+          if ((currentSite = Intersect(bisector, rightBoundaryHalfEdge)) != null)
           {
             // push the HE into the ordered linked list of vertices
-            InsertPriorityQueue(bisector, site, Distance(site, nextSite));
+            InsertPriorityQueue(bisector, currentSite, Distance(currentSite, nextSite));
           }
 
           nextSite = NextSite();
@@ -161,16 +156,10 @@ namespace Voronoi2
         else if (!IsEmptyPriorityQueue())/* intersection is smallest - this is a vector event */
         {
           // pop the HalfEdge with the lowest vector off the ordered list of vectors.
-          leftBoundaryHalfEdge = ExtractHalfEdgePriorityQueue();
-
-          // get the HalfEdge to the left of the above HE
-          var llbnd = leftBoundaryHalfEdge.Left;
+          var leftBoundaryHalfEdge = ExtractHalfEdgePriorityQueue();
 
           // get the HalfEdge to the right of the above HE
           rightBoundaryHalfEdge = leftBoundaryHalfEdge.Right;
-
-          // get the HalfEdge to the right of the HE to the right of the lowest HE
-          var rrbnd = rightBoundaryHalfEdge.Right;
 
           // get the Site to the left of the left HE which it bisects
           bottomSite = LeftRegion(leftBoundaryHalfEdge);
@@ -184,10 +173,10 @@ namespace Voronoi2
           vertex.SiteIndex = _vertexCount++;
 
           // Set the endpoint of the left HalfEdge to be this vector.
-          Endpoint(leftBoundaryHalfEdge.EdgeListEdge, leftBoundaryHalfEdge.EdgeListSide, vertex);
-          
+          EndPoint(leftBoundaryHalfEdge.EdgeListEdge, leftBoundaryHalfEdge.EdgeListSide, vertex);
+
           // Set the endpoint of the right HalfEdge to be this vector
-          Endpoint(rightBoundaryHalfEdge.EdgeListEdge, rightBoundaryHalfEdge.EdgeListSide, vertex);
+          EndPoint(rightBoundaryHalfEdge.EdgeListEdge, rightBoundaryHalfEdge.EdgeListSide, vertex);
 
           // mark the lowest half-edge for deletion - can't delete yet because there might be pointers to it in Hash Map.
           DeleteFromEdgeList(leftBoundaryHalfEdge);
@@ -203,7 +192,7 @@ namespace Voronoi2
           // if the site to the left of the event is higher than the Site
           if (bottomSite.Point.Y > top.Point.Y)
           {
-            // to the right of it, then swap them and set the 'pm' variable to 1
+            // to the right of it, then swap them and set the 'side' variable to 1
             Swap(ref bottomSite, ref top);
 
             side = RightSide;
@@ -214,27 +203,27 @@ namespace Voronoi2
           edge = Bisect(bottomSite, top);
 
           // create a HE from the Edge 'edge' and make it point to that edge with its EdgeListEdge field.
-          var bisector = CreateHalfEdge(edge, side);
+          var bisector = new HalfEdge(edge, side);
 
           // insert the new bisector to the
           // right of the left HE
-          InsertIntoEdgeList(llbnd, bisector);
+          InsertIntoEdgeList(leftBoundaryHalfEdge.Left, bisector);
 
           // Set one endpoint to the new edge to be the vector point 'site'.
           // If the site to the left of this bisector is higher than the right Site, then this endpoint is put in position 0; otherwise in pos 1.
-          Endpoint(edge, RightSide - side, vertex);
+          EndPoint(edge, RightSide - side, vertex);
 
           // if left HE and the new bisector intersect, then delete the left HE, and reinsert it
-          if ((site = Intersect(llbnd, bisector)) != null)
+          if ((currentSite = Intersect(leftBoundaryHalfEdge.Left, bisector)) != null)
           {
-            DeletePriorityQueue(llbnd);
-            InsertPriorityQueue(llbnd, site, Distance(site, bottomSite));
+            DeletePriorityQueue(leftBoundaryHalfEdge.Left);
+            InsertPriorityQueue(leftBoundaryHalfEdge.Left, currentSite, Distance(currentSite, bottomSite));
           }
 
           // if right HE and the new bisector intersect, then reinsert it
-          if ((site = Intersect(bisector, rrbnd)) != null)
+          if ((currentSite = Intersect(bisector, rightBoundaryHalfEdge.Right)) != null)
           {
-            InsertPriorityQueue(bisector, site, Distance(site, bottomSite));
+            InsertPriorityQueue(bisector, currentSite, Distance(currentSite, bottomSite));
           }
         }
         else
@@ -243,7 +232,7 @@ namespace Voronoi2
         }
       }
 
-      for (leftBoundaryHalfEdge = _edgeListLeftHalfEdge.Right; leftBoundaryHalfEdge != _edgeListRightHalfEdge; leftBoundaryHalfEdge = leftBoundaryHalfEdge.Right)
+      for (var leftBoundaryHalfEdge = _edgeListLeftHalfEdge.Right; leftBoundaryHalfEdge != _edgeListRightHalfEdge; leftBoundaryHalfEdge = leftBoundaryHalfEdge.Right)
       {
         ClipEdge(edge = leftBoundaryHalfEdge.EdgeListEdge);
       }
@@ -290,14 +279,35 @@ namespace Voronoi2
       ? _sites[_siteIndex++]
       : default(Site);
 
-    private Edge Bisect(Site s1, Site s2)
+    private Edge Bisect(Site site0, Site site1)
     {
-      var newEdge = new Edge
+      var a = 0D;
+      var b = 0D;
+      var c = 0D;
+      var deltaX = site1.Point.X - site0.Point.X;
+      var deltaY = site1.Point.Y - site0.Point.Y;
+
+      c = site0.Point.X * deltaX + site0.Point.Y * deltaY + (deltaX * deltaX + deltaY * deltaY) * 0.5;
+
+      if ((deltaX > 0 ? deltaX : -deltaX) > (deltaY > 0 ? deltaY : -deltaY))
+      {
+        a = 1D;
+        b = deltaY / deltaX;
+        c /= deltaX;
+      }
+      else
+      {
+        a = deltaX / deltaY;
+        b = 1D;
+        c /= deltaY;
+      }
+
+      return new Edge(a, b, c, _edgeCount++)
       {
         Region =
         {
-          [0] = s1,
-          [1] = s2
+          [0] = site0,
+          [1] = site1
         },
         EndPoint =
         {
@@ -305,31 +315,7 @@ namespace Voronoi2
           [1] = default(Site)
         }
       };
-
-      var deltaX = s2.Point.X - s1.Point.X;
-      var deltaY = s2.Point.Y - s1.Point.Y;
-
-      newEdge.C = s1.Point.X * deltaX + s1.Point.Y * deltaY + (deltaX * deltaX + deltaY * deltaY) * 0.5;
-
-      if ((deltaX > 0 ? deltaX : -deltaX) > (deltaY > 0 ? deltaY : -deltaY))
-      {
-        newEdge.A = 1.0;
-        newEdge.B = deltaY / deltaX;
-        newEdge.C /= deltaX;
-      }
-      else
-      {
-        newEdge.A = deltaX / deltaY;
-        newEdge.B = 1.0;
-        newEdge.C /= deltaY;
-      }
-
-      newEdge.EdgeIndex = _edgeCount++;
-
-      return newEdge;
     }
-
-    private void MakeVertex(Site site) => site.SiteIndex = _vertexCount++;
 
     private void InitializePriorityQueue()
     {
@@ -432,14 +418,6 @@ namespace Voronoi2
       return halfEdge;
     }
 
-    private static HalfEdge CreateHalfEdge(Edge edge, int pm) => new HalfEdge
-    {
-      EdgeListEdge = edge,
-      EdgeListSide = pm,
-      Next = null,
-      Vertex = null
-    };
-
     private void InitializeEdgeList()
     {
       _edgeListHashSize = 2 * _siteCountSquareRoot;
@@ -450,8 +428,8 @@ namespace Voronoi2
         _edgeListHash[i] = null;
       }
 
-      _edgeListLeftHalfEdge = CreateHalfEdge(null, 0);
-      _edgeListRightHalfEdge = CreateHalfEdge(null, 0);
+      _edgeListLeftHalfEdge = new HalfEdge();
+      _edgeListRightHalfEdge = new HalfEdge();
       _edgeListLeftHalfEdge.Left = null;
       _edgeListLeftHalfEdge.Right = _edgeListRightHalfEdge;
       _edgeListRightHalfEdge.Left = _edgeListLeftHalfEdge;
@@ -462,7 +440,7 @@ namespace Voronoi2
 
     private Site LeftRegion(HalfEdge halfEdge)
     {
-      return halfEdge.EdgeListEdge != null
+      return halfEdge.EdgeListEdge != default(Edge)
         ? (halfEdge.EdgeListSide == LeftSide ? halfEdge.EdgeListEdge.Region[LeftSide] : halfEdge.EdgeListEdge.Region[RightSide])
         : _bottomSite;
     }
@@ -483,7 +461,7 @@ namespace Voronoi2
       halfEdge.IsDeleted = true;
     }
 
-    /* Get entry from hash table, pruning any deleted nodes */
+    // Get entry from hash table, pruning any deleted nodes
     private HalfEdge GetHashFromEdgeList(int b)
     {
       if (b < 0 || b >= _edgeListHashSize)
@@ -520,51 +498,47 @@ namespace Voronoi2
         bucket = _edgeListHashSize - 1;
       }
 
-      var he = GetHashFromEdgeList(bucket);
+      var halfEdge = GetHashFromEdgeList(bucket);
 
-      // if the HE isn't found, search backwards and forwards in the hash map
-      // for the first non-null entry
-      if (he == null)
+      // if the HE isn't found, search backwards and forwards in the hash map for the first non-null entry
+      if (halfEdge == null)
       {
         for (var i = 1; i < _edgeListHashSize; i++)
         {
-          if ((he = GetHashFromEdgeList(bucket - i)) != null)
+          if ((halfEdge = GetHashFromEdgeList(bucket - i)) != null)
             break;
-          if ((he = GetHashFromEdgeList(bucket + i)) != null)
+
+          if ((halfEdge = GetHashFromEdgeList(bucket + i)) != null)
             break;
         }
       }
 
-      /* Now search linear list of halfedges for the correct one */
-      if (he == _edgeListLeftHalfEdge || (he != _edgeListRightHalfEdge && RightSideOf(he, point)))
+      // Now search linear list of halfedges for the correct one
+      if (halfEdge == _edgeListLeftHalfEdge || halfEdge != _edgeListRightHalfEdge && RightSideOf(halfEdge, point))
       {
-        // keep going right on the list until either the end is reached, or
-        // you find the 1st edge which the point isn't to the right of
+        // keep going right on the list until either the end is reached, or you find the 1st edge which the point isn't to the right of
         do
         {
-          he = he.Right;
-        }
-        while (he != _edgeListRightHalfEdge && RightSideOf(he, point));
-        he = he.Left;
+          halfEdge = halfEdge.Right;
+        } while (halfEdge != _edgeListRightHalfEdge && RightSideOf(halfEdge, point));
+
+        halfEdge = halfEdge.Left;
       }
-      else
-      // if the point is to the left of the HalfEdge, then search left for
-      // the HE just to the left of the point
+      else // if the point is to the left of the HalfEdge, then search left for the HE just to the left of the point
       {
         do
         {
-          he = he.Left;
-        }
-        while (he != _edgeListLeftHalfEdge && !RightSideOf(he, point));
+          halfEdge = halfEdge.Left;
+        } while (halfEdge != _edgeListLeftHalfEdge && !RightSideOf(halfEdge, point));
       }
 
-      /* Update hash table and reference counts */
+      // Update hash table and reference counts
       if (bucket > 0 && bucket < _edgeListHashSize - 1)
       {
-        _edgeListHash[bucket] = he;
+        _edgeListHash[bucket] = halfEdge;
       }
 
-      return he;
+      return halfEdge;
     }
 
     private void ClipEdge(Edge edge)
@@ -716,7 +690,7 @@ namespace Voronoi2
       _allEdges.Add(new GraphEdge(new Point(x1, y1), new Point(x2, y2), edge.Region[0].SiteIndex, edge.Region[1].SiteIndex));
     }
 
-    private void Endpoint(Edge edge, int side, Site site)
+    private void EndPoint(Edge edge, int side, Site site)
     {
       edge.EndPoint[side] = site;
 
@@ -727,52 +701,56 @@ namespace Voronoi2
     }
 
     // Returns true if point is to right of halfedge edge
-    private static bool RightSideOf(HalfEdge el, Point p)
+    private static bool RightSideOf(HalfEdge halfEdge, Point point)
     {
-      bool above;
+      var above = false;
+      var edge = halfEdge.EdgeListEdge;
+      var topsite = edge.Region[1];
+      var rightOfSite = point.X > topsite.Point.X;
 
-      var e = el.EdgeListEdge;
-      var topsite = e.Region[1];
-
-      var rightOfSite = p.X > topsite.Point.X;
-
-      if (rightOfSite && el.EdgeListSide == LeftSide)
+      if (rightOfSite && halfEdge.EdgeListSide == LeftSide)
       {
         return true;
       }
 
-      if (!rightOfSite && el.EdgeListSide == RightSide)
+      if (!rightOfSite && halfEdge.EdgeListSide == RightSide)
       {
         return false;
       }
 
-      if (IsNearlyEqual(e.A, 1D))
+      if (IsNearlyEqual(edge.A, 1D))
       {
-        var dxp = p.X - topsite.Point.X;
-        var dyp = p.Y - topsite.Point.Y;
-
+        var deltaX = point.X - topsite.Point.X;
+        var deltaY = point.Y - topsite.Point.Y;
         var fast = false;
 
-        if ((!rightOfSite & (e.B < 0.0)) | (rightOfSite & (e.B >= 0.0)))
+        if (!rightOfSite && edge.B < 0D || rightOfSite && edge.B >= 0D)
         {
-          above = dyp >= e.B * dxp;
+          above = deltaY >= edge.B * deltaX;
           fast = above;
         }
         else
         {
-          above = p.X + p.Y * e.B > e.C;
-          if (e.B < 0.0)
+          above = point.X + point.Y * edge.B > edge.C;
+
+          if (edge.B < 0D)
+          {
             above = !above;
+          }
+
           if (!above)
+          {
             fast = true;
+          }
         }
+
         if (!fast)
         {
-          var dxs = topsite.Point.X - e.Region[0].Point.X;
+          var dxs = topsite.Point.X - edge.Region[0].Point.X;
 
-          above = e.B * (dxp * dxp - dyp * dyp) < dxs * dyp * (1.0 + 2.0 * dxp / dxs + e.B * e.B);
+          above = edge.B * (deltaX * deltaX - deltaY * deltaY) < dxs * deltaY * (1.0 + 2.0 * deltaX / dxs + edge.B * edge.B);
 
-          if (e.B < 0)
+          if (edge.B < 0)
           {
             above = !above;
           }
@@ -780,15 +758,15 @@ namespace Voronoi2
       }
       else // edge.b == 1.0
       {
-        var yl = e.C - e.A * p.X;
-        var t1 = p.Y - yl;
-        var t2 = p.X - topsite.Point.X;
+        var yl = edge.C - edge.A * point.X;
+        var t1 = point.Y - yl;
+        var t2 = point.X - topsite.Point.X;
         var t3 = yl - topsite.Point.Y;
 
         above = t1 * t1 > t2 * t2 + t3 * t3;
       }
 
-      return el.EdgeListSide == LeftSide ? above : !above;
+      return halfEdge.EdgeListSide == LeftSide ? above : !above;
     }
 
     private Site RightRegion(HalfEdge halfEdge)
@@ -815,38 +793,44 @@ namespace Voronoi2
 
     private const double DefaultTolerance = 1e-10;
 
-    private static bool IsNearlyEqual(double x, double y, double tolerance = DefaultTolerance) => Math.Abs(x - y) <= tolerance;
+    public static bool IsNearlyEqual(double x, double y, double tolerance = DefaultTolerance) => Math.Abs(x - y) <= tolerance;
 
     // create a new site where the HalfEdges halfEdge0 and halfEdge1 intersect - note that the Point in the argument list is not used, don't know why it'site there.
     private static Site Intersect(HalfEdge halfEdge0, HalfEdge halfEdge1)
     {
-      var e1 = halfEdge0.EdgeListEdge;
-      var e2 = halfEdge1.EdgeListEdge;
+      var edge0 = halfEdge0.EdgeListEdge;
+      var edge1 = halfEdge1.EdgeListEdge;
 
       // if the two edges bisect the same parent, return null
-      if (e1 == null || e2 == null || e1.Region[1] == e2.Region[1])
+      if (edge0 == default(Edge) || edge1 == default(Edge) || edge0.Region[1] == edge1.Region[1])
+      {
         return null;
+      }
 
-      var d = e1.A * e2.B - e1.B * e2.A;
+      var d = edge0.A * edge1.B - edge0.B * edge1.A;
 
-      if (-DefaultTolerance < d && d < DefaultTolerance)
+      if (Math.Abs(d) < DefaultTolerance)
+      {
         return null;
+      }
 
-      var intersectX = (e1.C * e2.B - e2.C * e1.B) / d;
-      var intersectY = (e2.C * e1.A - e1.C * e2.A) / d;
+      var intersectX = (edge0.C * edge1.B - edge1.C * edge0.B) / d;
+      var intersectY = (edge1.C * edge0.A - edge0.C * edge1.A) / d;
 
-      Edge edge;
-      HalfEdge halfEdge;
+      var edge = default(Edge);
+      var halfEdge = default(HalfEdge);
 
-      if (e1.Region[1].Point.Y < e2.Region[1].Point.Y || (IsNearlyEqual(e1.Region[1].Point.Y, e2.Region[1].Point.Y) && e1.Region[1].Point.X < e2.Region[1].Point.X))
+      if ( IsNearlyEqual(edge0.Region[1].Point.Y, edge1.Region[1].Point.Y) 
+        && edge0.Region[1].Point.X < edge1.Region[1].Point.X 
+        || edge0.Region[1].Point.Y < edge1.Region[1].Point.Y)
       {
         halfEdge = halfEdge0;
-        edge = e1;
+        edge = edge0;
       }
       else
       {
         halfEdge = halfEdge1;
-        edge = e2;
+        edge = edge1;
       }
 
       var rightOfSite = intersectX >= edge.Region[1].Point.X;
@@ -859,6 +843,5 @@ namespace Voronoi2
       // Create a new site at the point of intersection - this is a new vector event waiting to happen
       return new Site(intersectX, intersectY);
     }
-
   }
 }
