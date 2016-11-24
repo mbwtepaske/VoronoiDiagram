@@ -18,8 +18,8 @@ namespace Voronoi2
     private double _borderMinimumY;
     private double _borderMaximumY;
 
-    public int _siteCount;
-    public int _siteCountSquareRoot;
+    private int _siteCount;
+    private int _siteCountSquareRoot;
     private int _siteIndex;
 
     private double _deltaX;
@@ -493,11 +493,6 @@ namespace Voronoi2
         {
           [0] = site0,
           [1] = site1
-        },
-        EndPoint =
-        {
-          [0] = default(Site),
-          [1] = default(Site)
         }
       };
     }
@@ -746,13 +741,13 @@ namespace Voronoi2
 
       if (IsNearlyEqual(edge.A, 1D) && edge.B >= 0D)
       {
-        s1 = edge.EndPoint[1];
-        s2 = edge.EndPoint[0];
+        s1 = edge.EndPoint1;
+        s2 = edge.EndPoint0;
       }
       else
       {
-        s1 = edge.EndPoint[0];
-        s2 = edge.EndPoint[1];
+        s1 = edge.EndPoint0;
+        s2 = edge.EndPoint1;
       }
 
       if (IsNearlyEqual(edge.A, 1D))
@@ -877,10 +872,33 @@ namespace Voronoi2
 
     private void EndPoint(Edge edge, int side, Site site)
     {
-      edge.EndPoint[side] = site;
+      switch (side)
+      {
+        case LeftSide:
+          edge.EndPoint0 = site;
+          break;
 
-      if (edge.EndPoint[RightSide - side] == null)
-        return;
+        case RightSide:
+          edge.EndPoint1 = site;
+          break;
+      }
+
+      switch (RightSide - side)
+      {
+        case LeftSide:
+          if (edge.EndPoint0 == null)
+          {
+            return;
+          }
+          break;
+
+        case RightSide:
+          if (edge.EndPoint1 == null)
+          {
+            return;
+          }
+          break;
+      }
 
       ClipEdge(edge);
     }

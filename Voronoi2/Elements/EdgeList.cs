@@ -133,7 +133,7 @@ namespace Voronoi2
     {
       var above = false;
       var edge = halfEdge.EdgeListEdge;
-      var topsite = edge.Region[1];
+      var topsite = edge.Region1;
       var rightOfSite = point.X > topsite.Point.X;
 
       if (rightOfSite && halfEdge.EdgeListSide == Voronoi.LeftSide)
@@ -174,7 +174,7 @@ namespace Voronoi2
 
         if (!fast)
         {
-          var dxs = topsite.Point.X - edge.Region[0].Point.X;
+          var dxs = topsite.Point.X - edge.Region0.Point.X;
 
           above = edge.B * (deltaX * deltaX - deltaY * deltaY) < dxs * deltaY * (1.0 + 2.0 * deltaX / dxs + edge.B * edge.B);
 
