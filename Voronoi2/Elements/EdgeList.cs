@@ -30,7 +30,6 @@ namespace Voronoi2
       _edgeListHash[_edgeListHashSize - 1] = _edgeListRightHalfEdge;
     }
 
-
     private static void InsertIntoEdgeList(HalfEdge halfEdge, HalfEdge newHalfEdge)
     {
       newHalfEdge.Left = halfEdge;
@@ -126,7 +125,6 @@ namespace Voronoi2
 
       return halfEdge;
     }
-
 
     // Returns true if point is to right of halfedge edge
     private static bool RightSideOf(HalfEdge halfEdge, Point point)

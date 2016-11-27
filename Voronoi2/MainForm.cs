@@ -49,7 +49,7 @@ namespace Voronoi2
         graphics.SmoothingMode = SmoothingMode.HighQuality;
         graphics.Clear(Color.White);
 
-        var edges = Voronoi.GenerateVoronoi(sites, 0, DiagramHost.Width, 0, DiagramHost.Height);
+        var edges = Voronoi.Generate(sites, 0, DiagramHost.Width, 0, DiagramHost.Height);
 
         foreach (var edge in edges)
         {

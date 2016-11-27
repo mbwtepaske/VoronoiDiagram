@@ -2,8 +2,8 @@
 
 namespace Voronoi2
 {
-  [DebuggerDisplay("{ToDebuggerString()}")]
-  public class Edge// : IEquatable<Edge>
+  [DebuggerDisplay("{ToDebuggerString(),nq}")]
+  public class Edge
   {
     public const double EqualityTolerance = 1E-10;
 
@@ -11,11 +11,10 @@ namespace Voronoi2
     public readonly double B;
     public readonly double C;
     public readonly int EdgeIndex;
-    public Site EndPoint0;
-    public Site EndPoint1;
-    public readonly Site[] Region;
-    public Site Region0;
-    public Site Region1;
+    public Site EndPointLeftSide;
+    public Site EndPointRightSide;
+    public Site RegionLeftSide;
+    public Site RegionRightSide;
 
     public Edge(double a, double b, double c, int edgeIndex)
     {
@@ -23,9 +22,8 @@ namespace Voronoi2
       B = b;
       C = c;
       EdgeIndex = edgeIndex;
-      Region = new Site[2];
     }
 
-    public string ToDebuggerString() => $"{EdgeIndex}: A={A:G3} B={B:G3} C={C:G3}";
+    public string ToDebuggerString() => $"{EdgeIndex}: A={A:F3} B={B:F3} C={C:F3}";
   }
 }

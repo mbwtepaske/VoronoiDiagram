@@ -7,6 +7,8 @@ namespace Voronoi2
 {
   public class Voronoi
   {
+    public const double DefaultTolerance = 1e-10;
+
     public const int LeftSide = 0;
     public const int RightSide = 1;
 
@@ -50,7 +52,7 @@ namespace Voronoi2
       _minimumDistanceBetweenSites = minimumDistanceBetweenSites;
     }
 
-    public List<GraphEdge> GenerateVoronoi(IReadOnlyList<Point> points
+    public List<GraphEdge> Generate(IReadOnlyList<Point> points
       , double borderMinimumX
       , double borderMaximumX
       , double borderMinimumY
@@ -275,7 +277,6 @@ namespace Voronoi2
       Sort(points);
 
       var newIntersection = default(Point);
-      var edge = default(Edge);
 
       InitializePriorityQueue();
       InitializeEdgeList();
@@ -310,7 +311,7 @@ namespace Voronoi2
           bottomSite = RightRegion(leftBoundaryHalfEdge);
 
           // create a new edge that bisects
-          edge = Bisect(bottomSite, nextSite);
+          var edge = Bisect(bottomSite, nextSite);
 
           // create a new HalfEdge, setting its EdgeListSide field to 0
           var bisector = new HalfEdge(edge, LeftSide);
@@ -390,7 +391,7 @@ namespace Voronoi2
 
           // create an Edge (or line) that is between the two Sites. 
           // This creates the formula of the line, and assigns a line number to it
-          edge = Bisect(bottomSite, top);
+          var edge = Bisect(bottomSite, top);
 
           // create a HE from the Edge 'edge' and make it point to that edge with its EdgeListEdge field.
           var bisector = new HalfEdge(edge, side);
@@ -489,11 +490,8 @@ namespace Voronoi2
 
       return new Edge(a, b, c, _edgeCount++)
       {
-        Region =
-        {
-          [0] = site0,
-          [1] = site1
-        }
+        RegionLeftSide = site0,
+        RegionRightSide = site1
       };
     }
 
@@ -621,7 +619,7 @@ namespace Voronoi2
     private Site LeftRegion(HalfEdge halfEdge)
     {
       return halfEdge.EdgeListEdge != default(Edge)
-        ? (halfEdge.EdgeListSide == LeftSide ? halfEdge.EdgeListEdge.Region[LeftSide] : halfEdge.EdgeListEdge.Region[RightSide])
+        ? (halfEdge.EdgeListSide == LeftSide ? halfEdge.EdgeListEdge.RegionLeftSide : halfEdge.EdgeListEdge.RegionRightSide)
         : _bottomSite;
     }
 
@@ -723,10 +721,10 @@ namespace Voronoi2
 
     private void ClipEdge(Edge edge)
     {
-      var x1 = edge.Region[0].Point.X;
-      var y1 = edge.Region[0].Point.Y;
-      var x2 = edge.Region[1].Point.X;
-      var y2 = edge.Region[1].Point.Y;
+      var x1 = edge.RegionLeftSide.Point.X;
+      var y1 = edge.RegionLeftSide.Point.Y;
+      var x2 = edge.RegionRightSide.Point.X;
+      var y2 = edge.RegionRightSide.Point.Y;
       var x = x2 - x1;
       var y = y2 - y1;
 
@@ -741,13 +739,13 @@ namespace Voronoi2
 
       if (IsNearlyEqual(edge.A, 1D) && edge.B >= 0D)
       {
-        s1 = edge.EndPoint1;
-        s2 = edge.EndPoint0;
+        s1 = edge.EndPointRightSide;
+        s2 = edge.EndPointLeftSide;
       }
       else
       {
-        s1 = edge.EndPoint0;
-        s2 = edge.EndPoint1;
+        s1 = edge.EndPointLeftSide;
+        s2 = edge.EndPointRightSide;
       }
 
       if (IsNearlyEqual(edge.A, 1D))
@@ -867,7 +865,7 @@ namespace Voronoi2
         }
       }
 
-      _allEdges.Add(new GraphEdge(new Point(x1, y1), new Point(x2, y2), edge.Region[0].SiteIndex, edge.Region[1].SiteIndex));
+      _allEdges.Add(new GraphEdge(new Point(x1, y1), new Point(x2, y2), edge.RegionLeftSide.SiteIndex, edge.RegionRightSide.SiteIndex));
     }
 
     private void EndPoint(Edge edge, int side, Site site)
@@ -875,25 +873,25 @@ namespace Voronoi2
       switch (side)
       {
         case LeftSide:
-          edge.EndPoint0 = site;
+          edge.EndPointLeftSide = site;
           break;
 
         case RightSide:
-          edge.EndPoint1 = site;
+          edge.EndPointRightSide = site;
           break;
       }
 
       switch (RightSide - side)
       {
         case LeftSide:
-          if (edge.EndPoint0 == null)
+          if (edge.EndPointLeftSide == null)
           {
             return;
           }
           break;
 
         case RightSide:
-          if (edge.EndPoint1 == null)
+          if (edge.EndPointRightSide == null)
           {
             return;
           }
@@ -908,7 +906,7 @@ namespace Voronoi2
     {
       var above = false;
       var edge = halfEdge.EdgeListEdge;
-      var topsite = edge.Region[1];
+      var topsite = edge.RegionRightSide;
       var rightOfSite = point.X > topsite.Point.X;
 
       if (rightOfSite && halfEdge.EdgeListSide == LeftSide)
@@ -949,7 +947,7 @@ namespace Voronoi2
 
         if (!fast)
         {
-          var dxs = topsite.Point.X - edge.Region[0].Point.X;
+          var dxs = topsite.Point.X - edge.RegionLeftSide.Point.X;
 
           above = edge.B * (deltaX * deltaX - deltaY * deltaY) < dxs * deltaY * (1.0 + 2.0 * deltaX / dxs + edge.B * edge.B);
 
@@ -982,8 +980,8 @@ namespace Voronoi2
 
       // if the EdgeListSide field is zero, return the site 0 that this edge bisects, otherwise return site number 1.
       return halfEdge.EdgeListSide == LeftSide
-        ? halfEdge.EdgeListEdge.Region[RightSide]
-        : halfEdge.EdgeListEdge.Region[LeftSide];
+        ? halfEdge.EdgeListEdge.RegionRightSide
+        : halfEdge.EdgeListEdge.RegionLeftSide;
     }
 
     public double Distance(Site s, Site t)
@@ -994,8 +992,6 @@ namespace Voronoi2
       return Math.Sqrt(dx * dx + dy * dy);
     }
 
-    private const double DefaultTolerance = 1e-10;
-
     public static bool IsNearlyEqual(double x, double y, double tolerance = DefaultTolerance) => Math.Abs(x - y) <= tolerance;
 
     // create a new site where the HalfEdges halfEdge0 and halfEdge1 intersect - note that the Point in the argument list is not used, don't know why it'site there.
@@ -1005,7 +1001,7 @@ namespace Voronoi2
       var edge1 = halfEdge1.EdgeListEdge;
 
       // if the two edges bisect the same parent, return null
-      if (edge0 == default(Edge) || edge1 == default(Edge) || edge0.Region[1] == edge1.Region[1])
+      if (edge0 == default(Edge) || edge1 == default(Edge) || edge0.RegionRightSide == edge1.RegionRightSide)
       {
         return null;
       }
@@ -1023,9 +1019,9 @@ namespace Voronoi2
       var edge = default(Edge);
       var halfEdge = default(HalfEdge);
 
-      if ( IsNearlyEqual(edge0.Region[1].Point.Y, edge1.Region[1].Point.Y) 
-        && edge0.Region[1].Point.X < edge1.Region[1].Point.X 
-        || edge0.Region[1].Point.Y < edge1.Region[1].Point.Y)
+      if ( IsNearlyEqual(edge0.RegionRightSide.Point.Y, edge1.RegionRightSide.Point.Y) 
+        && edge0.RegionRightSide.Point.X < edge1.RegionRightSide.Point.X 
+        || edge0.RegionRightSide.Point.Y < edge1.RegionRightSide.Point.Y)
       {
         halfEdge = halfEdge0;
         edge = edge0;
@@ -1036,7 +1032,7 @@ namespace Voronoi2
         edge = edge1;
       }
 
-      var rightOfSite = intersectX >= edge.Region[1].Point.X;
+      var rightOfSite = intersectX >= edge.RegionRightSide.Point.X;
 
       if (rightOfSite && halfEdge.EdgeListSide == LeftSide || !rightOfSite && halfEdge.EdgeListSide == RightSide)
       {

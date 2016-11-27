@@ -62,7 +62,6 @@
     <Compile Include="Elements\Edge.cs" />
     <None Include="Elements\EdgeList.cs" />
     <Compile Include="Elements\HalfEdge.cs" />
-    <Compile Include="Elements\Side.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
